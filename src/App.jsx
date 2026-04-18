@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useTaskStore } from "./store/useTaskStore";
 import { useDrag, useDrop } from "react-dnd";
 
-
 // ----------------------
 // ADD TASK FORM
 // ----------------------
@@ -11,43 +10,44 @@ function AddTaskForm({ columnId }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  const handleAdd = () => {
+  const handleSubmit = () => {
     if (!title.trim()) return;
 
     addTask(columnId, title, description);
-
     setTitle("");
     setDescription("");
   };
 
   return (
-    <div style={{ marginBottom: "10px" }}>
+    <div>
       <input
+        aria-label="Task title"
         placeholder="Task title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        style={{ width: "100%", marginBottom: "5px" }}
       />
+
       <input
+        aria-label="Task description"
         placeholder="Description"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        style={{ width: "100%", marginBottom: "5px" }}
       />
-      <button onClick={handleAdd} style={{ width: "100%" }}>
+
+      <button aria-label="Add task" onClick={handleSubmit}>
         Add Task
       </button>
     </div>
   );
 }
 
-
 // ----------------------
-// TASK CARD (Draggable)
+// TASK CARD
 // ----------------------
 function TaskCard({ task }) {
   const { deleteTask, updateTask } = useTaskStore();
-  const [isEditing, setIsEditing] = useState(false);
+
+  const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
 
@@ -59,54 +59,59 @@ function TaskCard({ task }) {
     }),
   }));
 
-  const handleSave = () => {
+  const saveChanges = () => {
     updateTask({
       ...task,
       title,
       description,
     });
-    setIsEditing(false);
+    setEditing(false);
   };
 
   return (
     <div
       ref={drag}
+      className="task"
       style={{
-        background: "#f1f1f1",
-        padding: "10px",
-        marginTop: "10px",
-        borderRadius: "5px",
         opacity: isDragging ? 0.5 : 1,
         cursor: "grab",
       }}
+      tabIndex="0"
     >
-      {isEditing ? (
+      {editing ? (
         <>
           <input
+            aria-label="Edit title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            style={{ width: "100%", marginBottom: "5px" }}
           />
+
           <input
+            aria-label="Edit description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            style={{ width: "100%", marginBottom: "5px" }}
           />
-          <button onClick={handleSave}>Save</button>
+
+          <button aria-label="Save task" onClick={saveChanges}>
+            Save
+          </button>
         </>
       ) : (
         <>
-          <strong>{task.title}</strong>
+          <h4>{task.title}</h4>
           <p>{task.description}</p>
 
           <button
-            onClick={() => setIsEditing(true)}
-            style={{ marginRight: "5px" }}
+            aria-label="Edit task"
+            onClick={() => setEditing(true)}
           >
             Edit
           </button>
 
-          <button onClick={() => deleteTask(task.id)}>
+          <button
+            aria-label="Delete task"
+            onClick={() => deleteTask(task.id)}
+          >
             Delete
           </button>
         </>
@@ -115,32 +120,20 @@ function TaskCard({ task }) {
   );
 }
 
-
 // ----------------------
-// COLUMN (Droppable)
+// COLUMN
 // ----------------------
 function Column({ column, tasks }) {
   const { moveTask } = useTaskStore();
 
   const [, drop] = useDrop(() => ({
     accept: "TASK",
-    drop: (item) => {
-      moveTask(item.id, column.id);
-    },
+    drop: (item) => moveTask(item.id, column.id),
   }));
 
   return (
-    <div
-      ref={drop}
-      style={{
-        background: "#fff",
-        padding: "15px",
-        borderRadius: "8px",
-        width: "250px",
-        minHeight: "300px",
-      }}
-    >
-      <h3>{column.title}</h3>
+    <div ref={drop} className="column">
+      <h2>{column.title}</h2>
 
       <AddTaskForm columnId={column.id} />
 
@@ -151,59 +144,68 @@ function Column({ column, tasks }) {
   );
 }
 
-
 // ----------------------
 // MAIN APP
 // ----------------------
 function App() {
   const [search, setSearch] = useState("");
 
-  const { columns, tasks, loadData, loading, error, clearError } =
-    useTaskStore();
+  const {
+    columns,
+    tasks,
+    loadData,
+    loading,
+    error,
+    clearError,
+  } = useTaskStore();
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  if (loading) return <h2>Loading...</h2>;
+  if (loading) {
+    return <h2 className="app">Loading tasks...</h2>;
+  }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Task Board</h1>
-     <input
-  placeholder="Search tasks..."
-  value={search}
-  onChange={(e) => setSearch(e.target.value)}
-  style={{
-    marginBottom: "20px",
-    padding: "8px",
-    width: "300px",
-  }}
-/>
+    <div className="app">
+      <h1>Task Management Board</h1>
+
+      <input
+        aria-label="Search tasks"
+        placeholder="Search tasks..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
 
       {error && (
-        <div style={{ color: "red", marginBottom: "10px" }}>
+        <div style={{ color: "red", marginBottom: "15px" }}>
           {error}
-          <button onClick={clearError} style={{ marginLeft: "10px" }}>
+          <button
+            aria-label="Close error"
+            onClick={clearError}
+            style={{ marginLeft: "10px", width: "auto", padding: "4px 10px" }}
+          >
             X
           </button>
         </div>
       )}
 
-      <div style={{ display: "flex", gap: "20px" }}>
+      <div className="board">
         {columns.map((column) => {
-          const columnTasks = tasks.filter(
-  (task) =>
-    task.columnId === column.id &&
-    task.title.toLowerCase().includes(search.toLowerCase())
-);
-
+          const filteredTasks = tasks.filter(
+            (task) =>
+              task.columnId === column.id &&
+              task.title
+                .toLowerCase()
+                .includes(search.toLowerCase())
+          );
 
           return (
             <Column
               key={column.id}
               column={column}
-              tasks={columnTasks}
+              tasks={filteredTasks}
             />
           );
         })}
